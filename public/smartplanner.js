@@ -1,0 +1,1 @@
+(()=>{const s=document.createElement('script');s.src='/smartplanner-source.js';document.head.appendChild(s)})();
