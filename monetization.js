@@ -1,6 +1,6 @@
 (()=>{
-// MVP mode: AI route planning is available before payments are connected.
-// When Stripe is configured, checkout can be re-enabled here without changing the planner.
+// MVP mode: AI planning is available before payments are connected.
+// This compatibility layer also routes the old Netlify function URL to Cloudflare Pages Functions.
 const qs=new URLSearchParams(location.search),sid=qs.get('session_id');
 if(qs.get('paid')==='1'&&sid){
   localStorage.setItem('kando_paid_session',sid);
@@ -8,14 +8,19 @@ if(qs.get('paid')==='1'&&sid){
 }
 const nativeFetch=window.fetch.bind(window);
 window.fetch=(input,init={})=>{
-  const url=typeof input==='string'?input:input?.url||'';
-  if((url.includes('/api/ai-plan')||url.includes('/.netlify/functions/ai-plan'))&&init.body){
-    try{
-      const b=JSON.parse(init.body);
-      const paidSession=localStorage.getItem('kando_paid_session');
-      if(paidSession)b.sessionId=paidSession;
-      init={...init,body:JSON.stringify(b)};
-    }catch{}
+  let url=typeof input==='string'?input:input?.url||'';
+  const isAi=url.includes('/.netlify/functions/ai-plan')||url.includes('/api/ai-plan');
+  if(isAi){
+    // Cloudflare Pages maps functions/api/ai-plan.js to /api/ai-plan.
+    if(url.includes('/.netlify/functions/ai-plan')) input='/api/ai-plan';
+    if(init.body){
+      try{
+        const b=JSON.parse(init.body);
+        const paidSession=localStorage.getItem('kando_paid_session');
+        if(paidSession)b.sessionId=paidSession;
+        init={...init,body:JSON.stringify(b)};
+      }catch{}
+    }
   }
   return nativeFetch(input,init);
 };
